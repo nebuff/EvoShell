@@ -21,9 +21,13 @@ You can install EvoShell with a single command:
 curl -sSL https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
 ```
 
-Or download and run the installer manually:
+**Alternative methods if curl doesn't work:**
 
 ```bash
+# Using wget
+wget -O - https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
+
+# Or download first, then run
 wget https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh
 chmod +x installer.sh
 ./installer.sh
