@@ -19,6 +19,7 @@ INSTALL_DIR="/tmp/evoshell-install"
 BINARY_NAME="evos"
 INSTALL_PATH="/usr/local/bin"
 DEBUG=${DEBUG:-false}
+FORCE_PKG_MANAGER=${FORCE_PKG_MANAGER:-""}
 
 # Function to print colored output
 print_info() {
@@ -49,6 +50,83 @@ print_header() {
     echo -e "${NC}"
 }
 
+# Function to select package manager interactively
+select_package_manager() {
+    if [ -n "$FORCE_PKG_MANAGER" ]; then
+        return  # Already forced, skip selection
+    fi
+    
+    # Check if running interactively (not piped)
+    if [ ! -t 0 ]; then
+        return  # Not interactive, use auto-detection
+    fi
+    
+    # Find available package managers
+    available_managers=()
+    if command -v apt &> /dev/null; then
+        available_managers+=("apt (Debian/Ubuntu)")
+    fi
+    if command -v dnf &> /dev/null; then
+        available_managers+=("dnf (Fedora)")
+    fi
+    if command -v yum &> /dev/null; then
+        available_managers+=("yum (RHEL/CentOS)")
+    fi
+    if command -v pacman &> /dev/null; then
+        available_managers+=("pacman (Arch Linux)")
+    fi
+    
+    # If multiple package managers are available, let user choose
+    if [ ${#available_managers[@]} -gt 1 ]; then
+        echo ""
+        print_info "Multiple package managers detected. Please choose one:"
+        echo ""
+        
+        for i in "${!available_managers[@]}"; do
+            echo "  $((i+1)). ${available_managers[i]}"
+        done
+        echo "  $((${#available_managers[@]}+1)). Auto-detect (default)"
+        echo ""
+        
+        while true; do
+            read -p "Enter your choice [1-$((${#available_managers[@]}+1))]: " choice
+            
+            # Default to auto-detect if empty
+            if [ -z "$choice" ]; then
+                choice=$((${#available_managers[@]}+1))
+            fi
+            
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le $((${#available_managers[@]}+1)) ]; then
+                if [ "$choice" -eq $((${#available_managers[@]}+1)) ]; then
+                    print_info "Using auto-detection"
+                    break
+                else
+                    selected_manager="${available_managers[$((choice-1))]}"
+                    case "$selected_manager" in
+                        "apt"*)
+                            FORCE_PKG_MANAGER="apt"
+                            ;;
+                        "dnf"*)
+                            FORCE_PKG_MANAGER="dnf"
+                            ;;
+                        "yum"*)
+                            FORCE_PKG_MANAGER="yum"
+                            ;;
+                        "pacman"*)
+                            FORCE_PKG_MANAGER="pacman"
+                            ;;
+                    esac
+                    print_info "Selected package manager: $FORCE_PKG_MANAGER"
+                    break
+                fi
+            else
+                echo "Invalid choice. Please enter a number between 1 and $((${#available_managers[@]}+1))."
+            fi
+        done
+        echo ""
+    fi
+}
+
 # Function to detect the Linux distribution
 detect_distro() {
     if [ -f /etc/os-release ]; then
@@ -56,35 +134,62 @@ detect_distro() {
         DISTRO=$ID
         DISTRO_FAMILY=""
         
-        case $DISTRO in
-            fedora|centos|rhel|rocky|almalinux)
-                DISTRO_FAMILY="fedora"
-                ;;
-            ubuntu|debian|mint|pop|elementary)
-                DISTRO_FAMILY="debian"
-                ;;
-            arch|manjaro|endeavouros|garuda)
-                DISTRO_FAMILY="arch"
-                ;;
-            *)
-                print_warning "Unknown distribution: $DISTRO"
-                print_info "Attempting to detect package manager..."
-                if command -v dnf &> /dev/null; then
-                    DISTRO_FAMILY="fedora"
-                elif command -v yum &> /dev/null; then
-                    DISTRO_FAMILY="fedora"
-                elif command -v apt &> /dev/null; then
+        # Check if user forced a specific package manager
+        if [ -n "$FORCE_PKG_MANAGER" ]; then
+            case $FORCE_PKG_MANAGER in
+                apt|debian)
                     DISTRO_FAMILY="debian"
-                elif command -v pacman &> /dev/null; then
+                    print_info "Forced package manager: apt/debian"
+                    ;;
+                dnf|yum|fedora)
+                    DISTRO_FAMILY="fedora"
+                    print_info "Forced package manager: dnf/yum/fedora"
+                    ;;
+                pacman|arch)
                     DISTRO_FAMILY="arch"
-                else
-                    print_error "Unsupported distribution. Please install manually."
+                    print_info "Forced package manager: pacman/arch"
+                    ;;
+                *)
+                    print_error "Invalid forced package manager: $FORCE_PKG_MANAGER"
+                    print_info "Supported options: apt, debian, dnf, yum, fedora, pacman, arch"
                     exit 1
-                fi
-                ;;
-        esac
+                    ;;
+            esac
+        else
+            # Auto-detect distribution
+            case $DISTRO in
+                fedora|centos|rhel|rocky|almalinux)
+                    DISTRO_FAMILY="fedora"
+                    ;;
+                ubuntu|debian|mint|pop|elementary)
+                    DISTRO_FAMILY="debian"
+                    ;;
+                arch|manjaro|endeavouros|garuda)
+                    DISTRO_FAMILY="arch"
+                    ;;
+                *)
+                    print_warning "Unknown distribution: $DISTRO"
+                    print_info "Attempting to detect package manager..."
+                    if command -v dnf &> /dev/null; then
+                        DISTRO_FAMILY="fedora"
+                    elif command -v yum &> /dev/null; then
+                        DISTRO_FAMILY="fedora"
+                    elif command -v apt &> /dev/null; then
+                        DISTRO_FAMILY="debian"
+                    elif command -v pacman &> /dev/null; then
+                        DISTRO_FAMILY="arch"
+                    else
+                        print_error "Unsupported distribution. Please install manually or use FORCE_PKG_MANAGER."
+                        print_info "Example: FORCE_PKG_MANAGER=apt curl -sSL ... | bash"
+                        exit 1
+                    fi
+                    ;;
+            esac
+        fi
     else
         print_error "Cannot detect Linux distribution. /etc/os-release not found."
+        print_info "You can force a package manager with FORCE_PKG_MANAGER environment variable."
+        print_info "Example: FORCE_PKG_MANAGER=apt curl -sSL ... | bash"
         exit 1
     fi
     
@@ -282,6 +387,9 @@ main() {
         print_info "The script will request sudo privileges when needed."
         sleep 2
     fi
+    
+    # Select package manager (interactive mode only)
+    select_package_manager
     
     # Detect distribution
     detect_distro

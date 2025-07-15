@@ -6,8 +6,36 @@ set -e
 echo "=== EvoShell Installer ==="
 echo "Installing EvoShell..."
 
+# Check for forced package manager
+FORCE_PKG_MANAGER=${FORCE_PKG_MANAGER:-""}
+
 # Detect OS and set package manager
-if command -v apt >/dev/null 2>&1; then
+if [ -n "$FORCE_PKG_MANAGER" ]; then
+    case $FORCE_PKG_MANAGER in
+        apt|debian)
+            PKG_MANAGER="apt"
+            INSTALL_CMD="sudo apt update && sudo apt install -y gcc make git build-essential"
+            ;;
+        dnf|fedora)
+            PKG_MANAGER="dnf"
+            INSTALL_CMD="sudo dnf install -y gcc make git"
+            ;;
+        yum)
+            PKG_MANAGER="yum"
+            INSTALL_CMD="sudo yum install -y gcc make git"
+            ;;
+        pacman|arch)
+            PKG_MANAGER="pacman"
+            INSTALL_CMD="sudo pacman -S --noconfirm gcc make git base-devel"
+            ;;
+        *)
+            echo "Error: Invalid FORCE_PKG_MANAGER value: $FORCE_PKG_MANAGER"
+            echo "Supported values: apt, debian, dnf, fedora, yum, pacman, arch"
+            exit 1
+            ;;
+    esac
+    echo "Using forced package manager: $PKG_MANAGER"
+elif command -v apt >/dev/null 2>&1; then
     PKG_MANAGER="apt"
     INSTALL_CMD="sudo apt update && sudo apt install -y gcc make git build-essential"
 elif command -v dnf >/dev/null 2>&1; then
@@ -21,6 +49,7 @@ elif command -v pacman >/dev/null 2>&1; then
     INSTALL_CMD="sudo pacman -S --noconfirm gcc make git base-devel"
 else
     echo "Error: Unsupported package manager. Please install gcc, make, and git manually."
+    echo "Or force a package manager with: FORCE_PKG_MANAGER=apt curl -sSL ... | bash"
     exit 1
 fi
 

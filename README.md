@@ -21,11 +21,27 @@ You can install EvoShell with a single command:
 curl -sSL https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
 ```
 
+**Force a specific package manager:**
+
+```bash
+# Force APT (Debian/Ubuntu)
+FORCE_PKG_MANAGER=apt curl -sSL https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
+
+# Force DNF (Fedora)
+FORCE_PKG_MANAGER=dnf curl -sSL https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
+
+# Force Pacman (Arch Linux)
+FORCE_PKG_MANAGER=pacman curl -sSL https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
+```
+
 **Alternative methods if curl doesn't work:**
 
 ```bash
 # Using wget
 wget -O - https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
+
+# Simple installer (more reliable for piping)
+curl -sSL https://raw.githubusercontent.com/nebuff/EvoShell/main/simple-install.sh | bash
 
 # Or download first, then run
 wget https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh
