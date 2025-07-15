@@ -21,7 +21,14 @@ You can install EvoShell with a single command:
 curl -sSL https://raw.githubusercontent.com/nebuff/EvoShell/main/installer.sh | bash
 ```
 
-**Force a specific package manager:**
+When multiple package managers are detected, you'll be prompted:
+```
+Type the name of your package manager, or press Enter for default (apt): 
+```
+
+You can type: `apt`, `dnf`, `yum`, or `pacman`, or just press Enter for the default.
+
+**Force a specific package manager (skip prompt):**
 
 ```bash
 # Force APT (Debian/Ubuntu)

@@ -9,6 +9,101 @@ echo "Installing EvoShell..."
 # Check for forced package manager
 FORCE_PKG_MANAGER=${FORCE_PKG_MANAGER:-""}
 
+# Function to detect and select package manager
+select_package_manager() {
+    # Find available package managers and determine default
+    available_managers=()
+    default_manager=""
+    
+    if command -v apt >/dev/null 2>&1; then
+        available_managers+=("apt")
+        if [ -z "$default_manager" ]; then
+            default_manager="apt"
+        fi
+    fi
+    if command -v dnf >/dev/null 2>&1; then
+        available_managers+=("dnf")
+        if [ -z "$default_manager" ]; then
+            default_manager="dnf"
+        fi
+    fi
+    if command -v yum >/dev/null 2>&1; then
+        available_managers+=("yum")
+        if [ -z "$default_manager" ]; then
+            default_manager="yum"
+        fi
+    fi
+    if command -v pacman >/dev/null 2>&1; then
+        available_managers+=("pacman")
+        if [ -z "$default_manager" ]; then
+            default_manager="pacman"
+        fi
+    fi
+    
+    # If running interactively and multiple managers available, ask user
+    if [ -z "$FORCE_PKG_MANAGER" ] && [ ${#available_managers[@]} -gt 1 ] && [ -t 0 ]; then
+        echo ""
+        echo "Multiple package managers detected: ${available_managers[*]}"
+        echo ""
+        
+        while true; do
+            read -p "Type the name of your package manager, or press Enter for default ($default_manager): " choice
+            
+            # Default if empty
+            if [ -z "$choice" ]; then
+                choice="$default_manager"
+                echo "Using default package manager: $choice"
+                break
+            fi
+            
+            # Validate choice
+            case "$choice" in
+                apt|debian)
+                    if command -v apt >/dev/null 2>&1; then
+                        choice="apt"
+                        break
+                    else
+                        echo "Error: apt not found on this system."
+                    fi
+                    ;;
+                dnf|fedora)
+                    if command -v dnf >/dev/null 2>&1; then
+                        choice="dnf"
+                        break
+                    else
+                        echo "Error: dnf not found on this system."
+                    fi
+                    ;;
+                yum)
+                    if command -v yum >/dev/null 2>&1; then
+                        choice="yum"
+                        break
+                    else
+                        echo "Error: yum not found on this system."
+                    fi
+                    ;;
+                pacman|arch)
+                    if command -v pacman >/dev/null 2>&1; then
+                        choice="pacman"
+                        break
+                    else
+                        echo "Error: pacman not found on this system."
+                    fi
+                    ;;
+                *)
+                    echo "Invalid choice: $choice"
+                    echo "Please enter one of: ${available_managers[*]}"
+                    ;;
+            esac
+        done
+        FORCE_PKG_MANAGER="$choice"
+        echo ""
+    elif [ -z "$FORCE_PKG_MANAGER" ]; then
+        # Auto-detect if not interactive or only one manager
+        FORCE_PKG_MANAGER="$default_manager"
+    fi
+}
+
 # Detect OS and set package manager
 if [ -n "$FORCE_PKG_MANAGER" ]; then
     case $FORCE_PKG_MANAGER in
@@ -34,26 +129,38 @@ if [ -n "$FORCE_PKG_MANAGER" ]; then
             exit 1
             ;;
     esac
-    echo "Using forced package manager: $PKG_MANAGER"
-elif command -v apt >/dev/null 2>&1; then
-    PKG_MANAGER="apt"
-    INSTALL_CMD="sudo apt update && sudo apt install -y gcc make git build-essential"
-elif command -v dnf >/dev/null 2>&1; then
-    PKG_MANAGER="dnf"
-    INSTALL_CMD="sudo dnf install -y gcc make git"
-elif command -v yum >/dev/null 2>&1; then
-    PKG_MANAGER="yum"
-    INSTALL_CMD="sudo yum install -y gcc make git"
-elif command -v pacman >/dev/null 2>&1; then
-    PKG_MANAGER="pacman"
-    INSTALL_CMD="sudo pacman -S --noconfirm gcc make git base-devel"
+    echo "Using package manager: $PKG_MANAGER"
 else
-    echo "Error: Unsupported package manager. Please install gcc, make, and git manually."
-    echo "Or force a package manager with: FORCE_PKG_MANAGER=apt curl -sSL ... | bash"
-    exit 1
+    # Call the selection function
+    select_package_manager
+    
+    case $FORCE_PKG_MANAGER in
+        apt)
+            PKG_MANAGER="apt"
+            INSTALL_CMD="sudo apt update && sudo apt install -y gcc make git build-essential"
+            ;;
+        dnf)
+            PKG_MANAGER="dnf"
+            INSTALL_CMD="sudo dnf install -y gcc make git"
+            ;;
+        yum)
+            PKG_MANAGER="yum"
+            INSTALL_CMD="sudo yum install -y gcc make git"
+            ;;
+        pacman)
+            PKG_MANAGER="pacman"
+            INSTALL_CMD="sudo pacman -S --noconfirm gcc make git base-devel"
+            ;;
+        *)
+            echo "Error: No supported package manager found or selected."
+            echo "Please install gcc, make, and git manually."
+            echo "Or force a package manager with: FORCE_PKG_MANAGER=apt curl -sSL ... | bash"
+            exit 1
+            ;;
+    esac
 fi
 
-echo "Detected package manager: $PKG_MANAGER"
+echo "Using package manager: $PKG_MANAGER"
 
 # Check for required tools
 missing_tools=""

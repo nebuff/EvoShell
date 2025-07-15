@@ -58,10 +58,10 @@ int num_builtins() {
 void welcome_message() {
     printf("%s", COLOR_CYAN);
     printf("╔══════════════════════════════════════════════════════════════════╗\n");
-    printf("║                          EvoShell v%s                           ║\n", EVOSHELL_VERSION);
-    printf("║                   A Simple and Intuitive Shell                  ║\n");
+    printf("║                          EvoShell v%s                            ║\n", EVOSHELL_VERSION);
+    printf("║                   A Simple and Intuitive Shell                   ║\n");
     printf("║                                                                  ║\n");
-    printf("║  Type 'help' for available commands or 'exit' to quit           ║\n");
+    printf("║  Type 'help' for available commands or 'exit' to quit            ║\n");
     printf("╚══════════════════════════════════════════════════════════════════╝\n");
     printf("%s\n", COLOR_RESET);
 }

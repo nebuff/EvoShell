@@ -44,8 +44,8 @@ print_error() {
 print_header() {
     echo -e "${CYAN}"
     echo "╔══════════════════════════════════════════════════════════════════╗"
-    echo "║                        EvoShell Installer                       ║"
-    echo "║                   Easy Installation Script                      ║"
+    echo "║                        EvoShell Installer                        ║"
+    echo "║                   Easy Installation Script                       ║"
     echo "╚══════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -61,68 +61,100 @@ select_package_manager() {
         return  # Not interactive, use auto-detection
     fi
     
-    # Find available package managers
+    # Find available package managers and determine default
     available_managers=()
+    default_manager=""
+    
     if command -v apt &> /dev/null; then
-        available_managers+=("apt (Debian/Ubuntu)")
+        available_managers+=("apt")
+        if [ -z "$default_manager" ]; then
+            default_manager="apt"
+        fi
     fi
     if command -v dnf &> /dev/null; then
-        available_managers+=("dnf (Fedora)")
+        available_managers+=("dnf")
+        if [ -z "$default_manager" ]; then
+            default_manager="dnf"
+        fi
     fi
     if command -v yum &> /dev/null; then
-        available_managers+=("yum (RHEL/CentOS)")
+        available_managers+=("yum")
+        if [ -z "$default_manager" ]; then
+            default_manager="yum"
+        fi
     fi
     if command -v pacman &> /dev/null; then
-        available_managers+=("pacman (Arch Linux)")
+        available_managers+=("pacman")
+        if [ -z "$default_manager" ]; then
+            default_manager="pacman"
+        fi
     fi
     
     # If multiple package managers are available, let user choose
     if [ ${#available_managers[@]} -gt 1 ]; then
         echo ""
-        print_info "Multiple package managers detected. Please choose one:"
+        print_info "Multiple package managers detected: ${available_managers[*]}"
         echo ""
-        
-        for i in "${!available_managers[@]}"; do
-            echo "  $((i+1)). ${available_managers[i]}"
-        done
-        echo "  $((${#available_managers[@]}+1)). Auto-detect (default)"
+        echo "Available options:"
+        echo "  apt     - For Debian, Ubuntu, Mint, etc."
+        echo "  dnf     - For Fedora (newer versions)"
+        echo "  yum     - For RHEL, CentOS (older versions)"
+        echo "  pacman  - For Arch Linux, Manjaro, etc."
         echo ""
         
         while true; do
-            read -p "Enter your choice [1-$((${#available_managers[@]}+1))]: " choice
+            read -p "Type the name of your package manager, or press Enter for default ($default_manager): " choice
             
-            # Default to auto-detect if empty
+            # Default to detected manager if empty
             if [ -z "$choice" ]; then
-                choice=$((${#available_managers[@]}+1))
+                choice="$default_manager"
+                print_info "Using default package manager: $choice"
+                break
             fi
             
-            if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le $((${#available_managers[@]}+1)) ]; then
-                if [ "$choice" -eq $((${#available_managers[@]}+1)) ]; then
-                    print_info "Using auto-detection"
-                    break
-                else
-                    selected_manager="${available_managers[$((choice-1))]}"
-                    case "$selected_manager" in
-                        "apt"*)
-                            FORCE_PKG_MANAGER="apt"
-                            ;;
-                        "dnf"*)
-                            FORCE_PKG_MANAGER="dnf"
-                            ;;
-                        "yum"*)
-                            FORCE_PKG_MANAGER="yum"
-                            ;;
-                        "pacman"*)
-                            FORCE_PKG_MANAGER="pacman"
-                            ;;
-                    esac
-                    print_info "Selected package manager: $FORCE_PKG_MANAGER"
-                    break
-                fi
-            else
-                echo "Invalid choice. Please enter a number between 1 and $((${#available_managers[@]}+1))."
-            fi
+            # Validate the choice
+            case "$choice" in
+                apt|debian)
+                    if command -v apt &> /dev/null; then
+                        choice="apt"
+                        break
+                    else
+                        echo "Error: apt not found on this system."
+                    fi
+                    ;;
+                dnf|fedora)
+                    if command -v dnf &> /dev/null; then
+                        choice="dnf"
+                        break
+                    else
+                        echo "Error: dnf not found on this system."
+                    fi
+                    ;;
+                yum)
+                    if command -v yum &> /dev/null; then
+                        choice="yum"
+                        break
+                    else
+                        echo "Error: yum not found on this system."
+                    fi
+                    ;;
+                pacman|arch)
+                    if command -v pacman &> /dev/null; then
+                        choice="pacman"
+                        break
+                    else
+                        echo "Error: pacman not found on this system."
+                    fi
+                    ;;
+                *)
+                    echo "Invalid choice: $choice"
+                    echo "Please enter one of: ${available_managers[*]}"
+                    ;;
+            esac
         done
+        
+        FORCE_PKG_MANAGER="$choice"
+        print_info "Selected package manager: $FORCE_PKG_MANAGER"
         echo ""
     fi
 }
