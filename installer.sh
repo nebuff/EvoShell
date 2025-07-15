@@ -18,10 +18,14 @@ REPO_URL="https://github.com/nebuff/EvoShell.git"
 INSTALL_DIR="/tmp/evoshell-install"
 BINARY_NAME="evos"
 INSTALL_PATH="/usr/local/bin"
+DEBUG=${DEBUG:-false}
 
 # Function to print colored output
 print_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
+    if [ "$DEBUG" = "true" ]; then
+        echo "[DEBUG] $(date): $1" >&2
+    fi
 }
 
 print_success() {
@@ -285,11 +289,16 @@ main() {
     # Check for existing installation
     if command -v evos &> /dev/null; then
         print_warning "EvoShell (evos) is already installed at: $(which evos)"
-        read -p "Do you want to reinstall? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Installation cancelled."
-            exit 0
+        # Check if running interactively (not piped)
+        if [ -t 0 ]; then
+            read -p "Do you want to reinstall? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                print_info "Installation cancelled."
+                exit 0
+            fi
+        else
+            print_info "Non-interactive mode detected. Proceeding with reinstallation..."
         fi
     fi
     
