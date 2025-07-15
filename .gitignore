@@ -1,0 +1,36 @@
+# Compiled binary
+evoshell
+evos
+
+# Object files
+*.o
+*.obj
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Temporary files
+*~
+*.swp
+*.swo
+.DS_Store
+
+# Build directories
+build/
+dist/
+
+# IDE files
+.vscode/
+.idea/
+*.vcxproj*
+*.sln
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# Installation temporary directory
+/tmp/evoshell-install/
